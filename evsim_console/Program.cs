@@ -24,7 +24,7 @@ namespace evsim_console
             simulation = new Simulator(
                 boardWidth: boardWidth,
                 boardHeight: boardHeight);
-            simulation.Init(100, 10);
+            simulation.Init(500, 30);
             //Task.Run(() => 
             //    simulation.Simulate(100));
             Engine.SetPalette(Palettes.Default);

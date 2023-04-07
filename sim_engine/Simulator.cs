@@ -28,8 +28,8 @@ namespace sim_engine
             Layers = new List<int>(4)
             {
                 2,// angle and distance to the closest food point
-                50,
-                50,
+                8,
+                8,
                 2// rotation increment, direction (positive -> forward, negative -> backward)
             };
         }
@@ -82,7 +82,7 @@ namespace sim_engine
         {
             return (float)_rnd.NextDouble();
         }
-        
+
         private float GetRandomCoordinateY()
         {
             return GetNextRandom() * _boardHeight;
@@ -143,6 +143,7 @@ namespace sim_engine
                 spec.stat.Life--;
             }
 
+            var goodDogs = new List<Species>();
             foreach (var foodPoint in FoodPoints.ToList())
             {
                 var nearestSpecies = Population
@@ -157,6 +158,7 @@ namespace sim_engine
                     nearestSpecies.stat.Energy = MaxEnergy;
                     nearestSpecies.stat.Life =
                         Math.Max(MaxEnergy, nearestSpecies.stat.Life + foodPoint.Nutrient);
+                    goodDogs.Add(nearestSpecies);
                     var foodNew = GetFoodPoint();
                     FoodPoints.Add(foodNew);
                     Debug.WriteLine($"Food added {foodNew.X}, {foodNew.Y}");
@@ -169,6 +171,19 @@ namespace sim_engine
                 {
                     Population.Remove(spec);
                 }
+            }
+
+            foreach (var goodDog in goodDogs)
+            {
+                var clones = goodDog.Clone(1,deviationFract:0.2f);
+                foreach (var clone in clones)
+                {
+                    var speciesParameters = GetParameters();
+                    clone.stat.Direction = speciesParameters.Direction;
+                    clone.stat.Energy = speciesParameters.Energy;
+                    clone.stat.Life = speciesParameters.Life;
+                }
+                Population.AddRange(clones);
             }
             //Debug.WriteLine($"Species: {Population.Count}, food points {FoodPoints.Count}");
         }
