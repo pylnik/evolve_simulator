@@ -28,8 +28,8 @@ namespace sim_engine
             Layers = new List<int>(4)
             {
                 2,// angle and distance to the closest food point
-                8,
-                8,
+                10,
+                10,
                 2// rotation increment, direction (positive -> forward, negative -> backward)
             };
         }
@@ -64,7 +64,7 @@ namespace sim_engine
         {
             var specParams = new SpeciesParameters()
             {
-                Direction = (float)(GetNextRandom() * Math.PI * 2),
+                Direction = (float)((GetNextRandom() - 0.5) * Math.PI * 2),
                 X = GetRandomCoordinateX(),
                 Y = GetRandomCoordinateY(),
                 Energy = 100,
@@ -88,10 +88,12 @@ namespace sim_engine
             return GetNextRandom() * _boardHeight;
         }
 
-        private const float MaxAngleIncrement = (float)(Math.PI / 20);//+-30 degree
+        private const float MaxAngleIncrement = (float)(Math.PI / 20);//+-a degree
         private const float MaxMovement = 10;//points to move
-        private const float MinDistanceToEat = 1;
+        private const float MinDistanceToEat = 2;
         private const float MaxEnergy = 1000;
+        private const float FertilationThreshold = 5;
+        public float MutationRate = 0.05f;
         public void Simulate(int iterations)
         {
             for (int i = 0; i < iterations; i++)
@@ -117,9 +119,9 @@ namespace sim_engine
                     var thoughts = spec.Think(new[] { angleNorm, dist });
                     if (thoughts != null)
                     {
-                        var angleN = (thoughts[0] - 0.5f) * 2;
-                        var movementN = (thoughts[1] - 0.5f) * 2; // norm to -1:1
-                        var angleR = angleN * MaxAngleIncrement * 2;
+                        var angleN = thoughts[0];// (thoughts[0] - 0.5f) * 2;
+                        var movementN = thoughts[1];// (thoughts[1] - 0.5f) * 2; // norm to -1:1
+                        var angleR = angleN * MaxAngleIncrement;
                         spec.stat.Direction += angleR;
                         var sin = Math.Sin(spec.stat.Direction);
                         var cos = Math.Cos(spec.stat.Direction);
@@ -153,15 +155,16 @@ namespace sim_engine
 
                 if (dist < MinDistanceToEat)
                 {
-                    FoodPoints.Remove(foodPoint);
+                    //FoodPoints.Remove(foodPoint);
                     Debug.WriteLine($"Food reached {foodPoint.X}, {foodPoint.Y}");
                     nearestSpecies.stat.Energy = MaxEnergy;
                     nearestSpecies.stat.Life =
                         Math.Max(MaxEnergy, nearestSpecies.stat.Life + foodPoint.Nutrient);
+                    nearestSpecies.stat.Fertilation += 1;
                     goodDogs.Add(nearestSpecies);
-                    var foodNew = GetFoodPoint();
-                    FoodPoints.Add(foodNew);
-                    Debug.WriteLine($"Food added {foodNew.X}, {foodNew.Y}");
+                    //var foodNew = GetFoodPoint();
+                    //FoodPoints.Add(foodNew);
+                    //Debug.WriteLine($"Food added {foodNew.X}, {foodNew.Y}");
                 }
             }
 
@@ -173,9 +176,18 @@ namespace sim_engine
                 }
             }
 
+            CloneIfPossible(goodDogs);
+            //Debug.WriteLine($"Species: {Population.Count}, food points {FoodPoints.Count}");
+        }
+
+        private void CloneIfPossible(List<Species> goodDogs)
+        {
             foreach (var goodDog in goodDogs)
             {
-                var clones = goodDog.Clone(1,deviationFract:0.2f);
+                if (goodDog.stat.Fertilation < FertilationThreshold)
+                    continue;
+                var clones = goodDog.Clone(1, mutationRate: MutationRate);
+                goodDog.stat.Fertilation = 0;
                 foreach (var clone in clones)
                 {
                     var speciesParameters = GetParameters();
@@ -183,9 +195,9 @@ namespace sim_engine
                     clone.stat.Energy = speciesParameters.Energy;
                     clone.stat.Life = speciesParameters.Life;
                 }
+
                 Population.AddRange(clones);
             }
-            //Debug.WriteLine($"Species: {Population.Count}, food points {FoodPoints.Count}");
         }
 
         private static float GetDistance(float x1, float y1, float x2, float y2)
