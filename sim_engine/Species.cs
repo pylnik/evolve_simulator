@@ -90,8 +90,8 @@ namespace sim_engine
                     stat = new SpeciesParameters()
                     {
                         Direction = stat.Direction,
-                        X = stat.X,
-                        Y = stat.Y,
+                        X = stat.X + 1,
+                        Y = stat.Y + 1,
                         Life = stat.Life,
                         Energy = stat.Energy
                     }
