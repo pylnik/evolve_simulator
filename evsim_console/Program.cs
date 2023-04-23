@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using sim_engine;
 using ConsoleGameEngine;
+using sim_engine2;
 
 namespace evsim_console
 {
@@ -17,26 +18,52 @@ namespace evsim_console
             new Program().Construct(boardWidth, boardHeight + 1, 4, 4, FramerateMode.Unlimited);
         }
 
-        Simulator simulation;
-        private static int boardWidth = 240;
+        Simulator2 simulation;
+        private ISelection _selector;
+        private static int boardWidth = 100;
         private static int boardHeight = 62;
+        public int IterationInSimulationRun = 100;
+        public int SpeciesCount = 100;
+        public int HiddenNeuronsCount = 20;
+        public int OutputNeuronsCount = 2;
+        public int GenesCount = 100;
+        public float MutationRate = 0.05f;
         public override void Create()
         {
-            simulation = new Simulator(
+            //_selector = new SelectionLeftX { FractionX = 0.1f };
+            _selector = new SelectionCenter() { Fraction = 0.2f };
+
+            _selector.BoardHeight = boardHeight;
+            _selector.BoardWidth = boardWidth;
+            simulation = new Simulator2(
                 boardWidth: boardWidth,
-                boardHeight: boardHeight);
-            simulation.MutationRate = 0.05f;
-            simulation.Init(100, 50);
-            //Task.Run(() => 
-            //    simulation.Simulate(100));
+                boardHeight: boardHeight)
+            {
+                MutationRate = MutationRate
+            };
+            simulation.SimulationFinished += Simulation_SimulationFinished;
+            simulation.Init(SpeciesCount, 2, HiddenNeuronsCount, OutputNeuronsCount, GenesCount);
+            Task.Run(() =>
+            {
+                for (int i = 0; i < 1000; i++)
+                {
+                    simulation.Simulate(IterationInSimulationRun);
+                    simulation.Population = simulation.ProduceNextGeneration(_selector);
+                    simulation.InitBoard();
+                }
+            });
             Engine.SetPalette(Palettes.Default);
+        }
+
+        private void Simulation_SimulationFinished()
+        {
         }
 
         //private List<Point> _species;
         //private List<Point> _foodPoints;
         public override void Update()
         {
-            simulation.Tick();
+            //simulation.Tick();
         }
 
         public class CPoint
@@ -54,13 +81,13 @@ namespace evsim_console
         {
             Engine.ClearBuffer();
 
-            var _species = simulation.Population.Select(p => new CPoint(new Point((int)p.stat.X, (int)p.stat.Y), 1000 + (int)(p.stat.Fertilation))).ToList();
-            var _foodPoints = simulation.FoodPoints.Select(p => new Point((int)p.X, (int)p.Y)).ToList();
+            var _species = simulation.Population.Select(p => new CPoint(new Point((int)p.Parameters.X, (int)p.Parameters.Y), 1000)).ToList();
+            //var _foodPoints = simulation.FoodPoints.Select(p => new Point((int)p.X, (int)p.Y)).ToList();
 
-            foreach (var foodPoint in _foodPoints)
-            {
-                Engine.SetPixel(foodPoint, 10);
-            }
+            //foreach (var foodPoint in _foodPoints)
+            //{
+            //    Engine.SetPixel(foodPoint, 10);
+            //}
 
             foreach (var spec in _species)
             {
